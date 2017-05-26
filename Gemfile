@@ -14,6 +14,7 @@ gem "faraday"
 group :development, :test do
   gem "byebug"
   gem 'pry'
+  gem 'dotenv'
 end
 
 group :test do

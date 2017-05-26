@@ -1,9 +1,12 @@
 require 'rubygems'
 require 'bundler/setup'
 require 'thor'
+require 'dotenv'
 
 require 'reports/github_api_client'
 require 'reports/table_printer'
+
+Dotenv.load
 
 module Reports
 
@@ -20,7 +23,7 @@ module Reports
     def user_info(username)
       puts "Getting info for #{username}"
 
-      client = GitHubAPIClient.new
+      client = GitHubAPIClient.new(ENV['GITHUB_TOKEN'])
       user = client.user_info(username)
       puts "name: #{user['name']}"
       puts "location: #{user['location']}"
@@ -28,6 +31,20 @@ module Reports
     rescue Error => e
       puts "ERROR #{e.message}"
       exit 1
+    end
+
+    desc 'repositories USERNAME', 'Get a list of public repositories for a user'
+    def repositories(username)
+      puts "Fetching repository statistics for #{username}..."
+
+      client = GitHubAPIClient.new(ENV['GITHUB_TOKEN'])
+      repos = client.repositories(username)
+      puts "#{username} has #{repos.count} public repos. \n\n"
+      repos.each do |repo|
+        puts "#{repo.full_name} - #{repo.url}"
+      end
+    rescue Error => e
+      puts "ERROR #{e.message}"
     end
 
     private
