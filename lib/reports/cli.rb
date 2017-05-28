@@ -23,7 +23,7 @@ module Reports
     def user_info(username)
       puts "Getting info for #{username}"
 
-      client = GitHubAPIClient.new(ENV['GITHUB_TOKEN'])
+      client = GitHubAPIClient.new
       user = client.user_info(username)
       puts "name: #{user['name']}"
       puts "location: #{user['location']}"
@@ -37,7 +37,7 @@ module Reports
     def repositories(username)
       puts "Fetching repository statistics for #{username}..."
 
-      client = GitHubAPIClient.new(ENV['GITHUB_TOKEN'])
+      client = GitHubAPIClient.new
       repos = client.repositories(username)
       puts "#{username} has #{repos.count} public repos. \n\n"
       repos.each do |repo|
