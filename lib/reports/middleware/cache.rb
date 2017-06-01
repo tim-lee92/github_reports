@@ -13,7 +13,10 @@ module Reports
 
         if cached_response
           if !expired?(cached_response)
-            return cached_response if !(cached_response.headers['Cache-Control'] == 'no-cache' || cached_response.headers['Cache-Control'] == 'must-revalidate')
+            if !(cached_response.headers['Cache-Control'] == 'no-cache' || cached_response.headers['Cache-Control'] == 'must-revalidate')
+              cached_response.env.response_headers['X-Faraday-Cache-Status'] = 'true'
+              return cached_response
+            end
           else
             env.request_headers['If-None-Match'] = cached_response.headers['ETag']
           end

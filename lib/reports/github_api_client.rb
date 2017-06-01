@@ -68,8 +68,8 @@ module Reports
         builder.use Middleware::JSONParsing
         builder.use Middleware::StatusCheck
         builder.use Middleware::Authentication
-        builder.use Middleware::Cache, Storage::Redis.new
         builder.use Middleware::Logging
+        builder.use Middleware::Cache, Storage::Redis.new
         builder.adapter Faraday.default_adapter
       end
     end
