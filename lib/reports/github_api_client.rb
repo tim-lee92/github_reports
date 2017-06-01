@@ -8,6 +8,7 @@ require_relative 'middleware/json_parsing'
 require_relative 'middleware/cache'
 # require_relative 'storage/memory'
 require_relative 'storage/memcached'
+require_relative 'storage/redis'
 
 module Reports
   class Error < StandardError; end
@@ -67,7 +68,7 @@ module Reports
         builder.use Middleware::JSONParsing
         builder.use Middleware::StatusCheck
         builder.use Middleware::Authentication
-        builder.use Middleware::Cache, Storage::Memcached.new
+        builder.use Middleware::Cache, Storage::Redis.new
         builder.use Middleware::Logging
         builder.adapter Faraday.default_adapter
       end
