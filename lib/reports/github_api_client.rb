@@ -61,8 +61,8 @@ module Reports
     def connection
       @connection ||= Faraday::Connection.new do |builder|
         builder.use(Middleware::Logging)
+        builder.use(Middleware::StatusCheck)
         builder.use(Middleware::Authentication)
-        builder.use(Middleware::Logging)
         builder.use(Middleware::JSONParsing)
         builder.adapter(Faraday.default_adapter)
       end
