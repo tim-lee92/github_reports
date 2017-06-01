@@ -1,27 +1,36 @@
 module Reports
   module Middleware
     class Cache < Faraday::Middleware
-      def initialize(app)
+      def initialize(app, storage)
         super(app)
         @app = app
-        @storage = {}
+        @storage = storage
       end
 
       def call(env)
         key = env.url.to_s
-        cached_response = @storage[key]
+        cached_response = @storage.read(key)
 
-        if cached_response && !(cached_response.headers['Cache-Control'].include?('no-cache') || cached_response.headers['Cache-Control'].include?('must-revalidate')) && !expired?(cached_response)
-          return cached_response
+        if cached_response
+          if !expired?(cached_response)
+            return cached_response if !(cached_response.headers['Cache-Control'] == 'no-cache' || cached_response.headers['Cache-Control'] == 'must-revalidate')
+          else
+            env.request_headers['If-None-Match'] = cached_response.headers['ETag']
+          end
         end
 
         response = @app.call(env)
-        return response unless env.method == :get
-
         response.on_complete do |response_env|
-          cache_control_header = response_env.response_headers['Cache-Control']
-          if cache_control_header && !cache_control_header.include?('no-store')
-            @storage[key] = response
+          if cachable_response?(response_env)
+            if response.status == 304
+              cached_response = @storage.read(key)
+              cached_response.headers['Date'] = response.headers['Date']
+              @storage.write(key, cached_response)
+
+              response.env.update(cached_response.env)
+            else
+              @storage.write(key, response)
+            end
           end
         end
 
@@ -29,6 +38,10 @@ module Reports
       end
 
       private
+
+      def cachable_response?(env)
+        env.method == :get && env.response_headers['Cache-Control'] && !env.response_headers['Cache-Control'].include?('no-store')
+      end
 
       def response_age(cached_response)
         date = cached_response.env['response_headers']['Date']

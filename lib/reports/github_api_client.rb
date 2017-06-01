@@ -5,12 +5,16 @@ require_relative 'middleware/logging'
 require_relative 'middleware/authentication'
 require_relative 'middleware/status_check'
 require_relative 'middleware/json_parsing'
+require_relative 'middleware/cache'
+# require_relative 'storage/memory'
+require_relative 'storage/memcached'
 
 module Reports
   class Error < StandardError; end
   class NonexistentUser < Error; end
   class RequestFailure < Error; end
   class BadCredentials < Error; end
+  class ConfigurationError < Error; end
 
   VALID_STATUS_CODES = [200, 302, 401, 403, 404, 422]
 
@@ -29,7 +33,7 @@ module Reports
       url = "https://api.github.com/users/#{username}"
 
       # start_time = Time.now
-      response = connection.get(url)
+      response = client.get(url)
       # duration = Time.now - start_time
 
       # @logger.debug '-> %s %s %d (%.3f s)' % [url, 'GET', response.status, duration]
@@ -45,7 +49,7 @@ module Reports
       url = "https://api.github.com/users/#{username}/repos"
 
       # start_time = Time.now
-      response = connection.get(url)
+      response = client.get(url)
       # duration = Time.now - start_time
 
       # @logger.debug '-> %s %s %d (%.4f s)' % [url, 'GET', response.status, duration]
@@ -58,13 +62,14 @@ module Reports
       end
     end
 
-    def connection
-      @connection ||= Faraday::Connection.new do |builder|
-        builder.use(Middleware::Logging)
-        builder.use(Middleware::StatusCheck)
-        builder.use(Middleware::Authentication)
-        builder.use(Middleware::JSONParsing)
-        builder.adapter(Faraday.default_adapter)
+    def client
+      @client ||= Faraday::Connection.new do |builder|
+        builder.use Middleware::JSONParsing
+        builder.use Middleware::StatusCheck
+        builder.use Middleware::Authentication
+        builder.use Middleware::Cache, Storage::Memcached.new
+        builder.use Middleware::Logging
+        builder.adapter Faraday.default_adapter
       end
     end
 
