@@ -57,8 +57,19 @@ module Reports
       # @logger.debug '-> %s %s %d (%.4f s)' % [url, 'GET', response.status, duration]
       # check_errors(JSON.parse(response.body)['message'], response.status, username) unless JSON.parse(response.body).kind_of?(Array)
       raise NonexistentUser, "'#{username}' does not exist" if response.status == 404
-
       response_array = response.body
+
+      link_header = response.headers['link']
+
+      if link_header
+        while match_data = link_header.match(/<(.*)>; rel="next"/)
+          next_page_url = match_data[1]
+          response = client.get(next_page_url)
+          link_header = response.headers['link']
+          response_array += response.body
+        end
+      end
+
       response_array.map! do |response_hash|
         Repo.new(response_hash['full_name'], response_hash['url'])
       end
@@ -68,10 +79,20 @@ module Reports
       url = "https://api.github.com/users/#{username}/events/public"
 
       response = client.get(url)
-
       raise NonexistentUser, "'#{username}' does not exist" if response.status == 404
-
       response_array = response.body
+
+      link_header = response.headers['link']
+
+      if link_header
+        while match_data = link_header.match(/<(.*)>; rel="next"/)
+          next_page_url = match_data[1]
+          response = client.get(next_page_url)
+          link_header = response.headers['link']
+          response_array += response.body
+        end
+      end
+
       response_array.map! do |response_hash|
         Activity.new(response_hash['type'], response_hash['repo']['name'])
       end
