@@ -7,7 +7,7 @@ module Reports::Middleware
   RSpec.describe Cache do
     let(:stubs) { Faraday::Adapter::Test::Stubs.new }
 
-    let(:storage) { ::Reports::Storage::Memcached.new }
+    let(:storage) { ::Reports::Storage::Redis.new }
 
     let(:conn) do
       Faraday.new do |builder|

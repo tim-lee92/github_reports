@@ -21,6 +21,7 @@ module Reports
 
   User = Struct.new(:name, :location, :public_repos)
   Repo = Struct.new(:full_name, :url)
+  Activity = Struct.new(:type, :repo_name)
 
   class GitHubAPIClient
     # def initialize(token)
@@ -60,6 +61,19 @@ module Reports
       response_array = response.body
       response_array.map! do |response_hash|
         Repo.new(response_hash['full_name'], response_hash['url'])
+      end
+    end
+
+    def activity(username)
+      url = "https://api.github.com/users/#{username}/events/public"
+
+      response = client.get(url)
+
+      raise NonexistentUser, "'#{username}' does not exist" if response.status == 404
+
+      response_array = response.body
+      response_array.map! do |response_hash|
+        Activity.new(response_hash['type'], response_hash['repo']['name'])
       end
     end
 

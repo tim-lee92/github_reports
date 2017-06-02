@@ -48,6 +48,19 @@ module Reports
       puts "ERROR #{e.message}"
     end
 
+    desc 'activity USERNAME', 'Get a list of activities for a user'
+    def activity(username)
+      client = GitHubAPIClient.new
+      # type - repo['name']
+      activities = client.activity(username)
+      activities.each do |activity|
+        puts "#{activity.type} - #{activity.repo_name}"
+      end
+    rescue Error => e
+      puts "ERROR #{e.message}"
+      exit 1
+    end
+
     private
 
     def client
