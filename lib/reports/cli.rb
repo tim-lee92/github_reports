@@ -50,18 +50,37 @@ module Reports
 
     desc 'activity USERNAME', 'Get a list of activities for a user'
     def activity(username)
+      puts "Fetching activity summary for #{username}"
       client = GitHubAPIClient.new
-      # type - repo['name']
+
       activities = client.activity(username)
-      activities.each do |activity|
-        puts "#{activity.type} - #{activity.repo_name}"
-      end
+      puts "Fetched #{activities.size} events.\n\n"
+      print_activity_report(activities)
+      # activities.each do |activity|
+      #   puts "#{activity.type} - #{activity.repo_name}"
+      # end
     rescue Error => e
       puts "ERROR #{e.message}"
       exit 1
     end
 
     private
+
+    def print_activity_report(activities)
+      table_printer = TablePrinter.new(STDOUT)
+      activity_type_map = activities.each_with_object(Hash.new(0)) do |activity, counts|
+        counts[activity.type] += 1
+      end
+
+      table_printer.print(activity_type_map, title: 'Activity Summary', total: true)
+      push_activities = activities.select { |activity| activity.type == 'PushEvent' }
+      push_activities_map = push_activities.each_with_object(Hash.new(0)) do |activity, counts|
+        counts[activity.repo_name] += 1
+      end
+
+      puts
+      table_printer.print(push_activities_map, title: 'Project Push Summary', total: true)
+    end
 
     def client
       @client ||= GitHubAPIClient.new
