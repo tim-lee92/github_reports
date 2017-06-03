@@ -20,7 +20,7 @@ module Reports
   VALID_STATUS_CODES = [200, 302, 401, 403, 404, 422]
 
   User = Struct.new(:name, :location, :public_repos)
-  Repo = Struct.new(:full_name, :url)
+  Repo = Struct.new(:full_name, :url, :languages)
   Activity = Struct.new(:type, :repo_name)
 
   class GitHubAPIClient
@@ -71,7 +71,10 @@ module Reports
       end
 
       response_array.map! do |response_hash|
-        Repo.new(response_hash['full_name'], response_hash['url'])
+        language_url = "https://api.github.com/repos/#{username}/#{response_hash['name']}/languages"
+        language_url_response = client.get(language_url)
+
+        Repo.new(response_hash['full_name'], response_hash['url'], language_url_response.body.keys)
       end
     end
 
