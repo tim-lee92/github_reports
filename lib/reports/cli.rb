@@ -35,15 +35,30 @@ module Reports
     end
 
     desc 'repositories USERNAME', 'Get a list of public repositories for a user'
+    option :forks, type: :boolean, desc: 'Include forks in stats', default: false
+
     def repositories(username)
       puts "Fetching repository statistics for #{username}..."
 
       client = GitHubAPIClient.new
-      repos = client.repositories(username)
-      puts "#{username} has #{repos.count} public repos. \n\n"
+      repos = client.repositories(username, forks: options[:forks])
+      puts "#{username} has #{repos.count} public repos.\n\n"
+      table_printer = TablePrinter.new(STDOUT)
+
       repos.each do |repo|
-        puts "#{repo.full_name}: #{repo.languages.join(', ')}"
+        table_printer.print(repo.languages, title: repo.full_name, humanize: true)
+        # puts "#{repo.full_name}: #{repo.languages.join(', ')}"
+        puts
       end
+
+      stats = Hash.new(0)
+        repos.each do |repo|
+          repo.languages.each_pair do |language, bytes|
+            stats[language] += bytes
+          end
+        end
+
+      table_printer.print(stats, title: "Language Summary", humanize: true, total: true)
     rescue Error => e
       puts "ERROR #{e.message}"
     end
@@ -61,6 +76,52 @@ module Reports
       # end
     rescue Error => e
       puts "ERROR #{e.message}"
+      exit 1
+    end
+
+    desc 'gist DESCRIPTION FILENAME CONTENTS', 'Create a private Gist on GitHub'
+    def gist(description, filename, contents)
+      puts 'Creating a private Gist...'
+
+      client = GitHubAPIClient.new
+      gist_url = client.gist(description, filename, contents)
+
+      puts "Your Gist is available at #{gist_url}."
+    rescue Error => e
+      puts "ERROR #{e.message}"
+      exit 1
+    end
+
+    desc 'star_repo FULL_REPO_NAME', 'Star a repository'
+    def star_repo(repo_name)
+      puts "Starring #{repo_name}"
+      client = GitHubAPIClient.new
+
+      if client.repo_starred?(repo_name)
+        puts "You have already starred #{repo_name}."
+      else
+        client.star_repo(repo_name)
+        puts "You have starred #{repo_name}."
+      end
+    rescue Error => e
+      puts "ERROR #{e.message}"
+      exit 1
+    end
+
+    desc "unstar_repo FULL_REPO_NAME", "Unstar a repository"
+    def unstar_repo(repo_name)
+      puts "Unstarring #{repo_name}..."
+
+      client = GitHubAPIClient.new
+
+      if client.repo_starred?(repo_name)
+        client.unstar_repo(repo_name)
+        puts "You have unstarred #{repo_name}."
+      else
+        puts "You have not starred #{repo_name}."
+      end
+    rescue Error => error
+      puts "ERROR #{error.message}"
       exit 1
     end
 

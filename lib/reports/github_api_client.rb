@@ -16,6 +16,7 @@ module Reports
   class RequestFailure < Error; end
   class BadCredentials < Error; end
   class ConfigurationError < Error; end
+  class GistCreationFailure < Error; end
 
   VALID_STATUS_CODES = [200, 302, 401, 403, 404, 422]
 
@@ -46,7 +47,7 @@ module Reports
       User.new(response_hash['name'], response_hash['location'], response_hash['public_repos'])
     end
 
-    def repositories(username)
+    def repositories(username, forks: forks)
       # headers = { Authorization: "token #{@token}" }
       url = "https://api.github.com/users/#{username}/repos"
 
@@ -71,10 +72,11 @@ module Reports
       end
 
       response_array.map! do |response_hash|
+        next if !forks && response_hash['fork']
         language_url = "https://api.github.com/repos/#{username}/#{response_hash['name']}/languages"
         language_url_response = client.get(language_url)
 
-        Repo.new(response_hash['full_name'], response_hash['url'], language_url_response.body.keys)
+        Repo.new(response_hash['full_name'], response_hash['url'], language_url_response.body)
       end
     end
 
@@ -101,6 +103,42 @@ module Reports
       end
     end
 
+    def gist(description, filename, contents)
+      url = "https://api.github.com/gists"
+
+      request_body = JSON.dump({
+        description: description,
+        public: true,
+        files: {
+          filename => {
+            content: contents
+          }
+        }
+      })
+
+      response = client.post(url, request_body)
+
+      if response.status == 201
+        response.body['html_url']
+      else
+        raise GistCreationFailure, response.body['message']
+      end
+    end
+
+    def star_repo(repo_name)
+      url = "https://api.github.com/user/starred/#{repo_name}"
+
+      response = client.put(url)
+      raise RequestFailure, response.body['message'] unless response == 204
+    end
+
+    def unstar_repo(repo_name)
+      url = "https://api.github.com/user/starred/#{repo_name}"
+
+      response = client.delete(url)
+      raise RequestFailure, response.body['message'] unless response == 204
+    end
+
     def client
       @client ||= Faraday::Connection.new do |builder|
         builder.use Middleware::JSONParsing
@@ -112,7 +150,13 @@ module Reports
       end
     end
 
-    private
+    def repo_starred?(repo_name)
+      url = "https://api.github.com/user/starred/#{repo_name}"
+
+      response = client.get(url)
+      # raise NonexistentRepo, response.body['message'] if response.status == 404
+      response.status == 204
+    end
 
     # def check_errors(message, status, username=nil)
     #   raise RequestFailure, message unless VALID_STATUS_CODES.include?(status)
