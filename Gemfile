@@ -5,7 +5,6 @@ ruby '2.1.2'
 gem "rake"
 gem "octokit"
 gem "thor"
-gem "dotenv"
 gem "activesupport"
 gem "dalli"
 gem "redis"

@@ -108,7 +108,7 @@ module Reports
 
       request_body = JSON.dump({
         description: description,
-        public: true,
+        public: false,
         files: {
           filename => {
             content: contents

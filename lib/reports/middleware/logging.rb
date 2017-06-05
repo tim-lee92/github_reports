@@ -5,8 +5,10 @@ module Reports
     class Logging < Faraday::Middleware
       def initialize(app)
         super(app)
+        level = ENV['LOG_LEVEL']
         @logger = Logger.new(STDOUT)
         @logger.formatter = proc { |severity, datetime, program, message| message + "\n" }
+        @logger.level = Logger.const_get(level) if level
       end
 
       def call(env)
