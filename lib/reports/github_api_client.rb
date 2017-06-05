@@ -140,7 +140,11 @@ module Reports
     end
 
     def client
-      @client ||= Faraday::Connection.new do |builder|
+      ca_path = File.expand_path("~/.mitmproxy/mitmproxy-ca-cert.pem")
+      options = { proxy: 'https://localhost:8080',
+                  ssl: {ca_file: ca_path},
+                  url: "https://api.github.com" }
+      @client ||= Faraday::Connection.new(options) do |builder|
         builder.use Middleware::JSONParsing
         builder.use Middleware::StatusCheck
         builder.use Middleware::Authentication
